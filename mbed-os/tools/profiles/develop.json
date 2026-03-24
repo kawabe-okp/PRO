@@ -42,7 +42,8 @@
             "-Wl,--wrap,_calloc_r",
             "-Wl,--wrap,exit",
             "-Wl,--wrap,atexit",
-            "-Wl,-n"
+            "-Wl,-n",
+            "-Wl,-u,_printf_float"
         ]
     },
     "ARMC6": {
