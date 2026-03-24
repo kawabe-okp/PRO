@@ -1,6 +1,5 @@
 .hg/
 .hgignore
-mbed-os/
 BUILD/
 __pycache__/
 *.pyc
