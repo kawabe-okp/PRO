@@ -31,15 +31,15 @@ TextLCD::TextLCD(PinName rs, PinName e, PinName d4, PinName d5,
     _e  = 1;
     _rs = 0;            // command mode
 
-    wait(0.015);        // Wait 15ms to ensure powered up
+    wait_us(15000);     // Wait 15ms to ensure powered up
 
     // send "Display Settings" 3 times (Only top nibble of 0x30 as we've got 4-bit bus)
     for (int i=0; i<3; i++) {
         writeByte(0x3);
-        wait(0.00164);  // this command takes 1.64ms, so wait for it
+        wait_us(1640);  // this command takes 1.64ms, so wait for it
     }
     writeByte(0x2);     // 4-bit mode
-    wait(0.000040f);    // most instructions take 40us
+    wait_us(40);        // most instructions take 40us
 
     writeCommand(0x28); // Function set 001 BW N F - -
     writeCommand(0x0C);
@@ -55,7 +55,7 @@ void TextLCD::character(int column, int row, int c) {
 
 void TextLCD::cls() {
     writeCommand(0x01); // cls, and set cursor to 0
-    wait(0.00164f);     // This command takes 1.64 ms
+    wait_us(1640);      // This command takes 1.64 ms
     locate(0, 0);
 }
 
@@ -91,14 +91,14 @@ int TextLCD::_getc() {
 
 void TextLCD::writeByte(int value) {
     _d = value >> 4;
-    wait(0.000040f); // most instructions take 40us
+    wait_us(40);      // most instructions take 40us
     _e = 0;
-    wait(0.000040f);
+    wait_us(40);
     _e = 1;
     _d = value >> 0;
-    wait(0.000040f);
+    wait_us(40);
     _e = 0;
-    wait(0.000040f);  // most instructions take 40us
+    wait_us(40);      // most instructions take 40us
     _e = 1;
 }
 
