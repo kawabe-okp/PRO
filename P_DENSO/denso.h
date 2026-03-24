@@ -1,0 +1,1164 @@
+void driveStart_denso();
+void get_combi_location_denso(combiData_t com[], combiData_t com2[], combiData_t com3[], int *secondCnt);
+void show_results_denso(const combiData_t *com);
+
+
+void driveStart_denso()
+{
+    char multiweight[SIZE] = {0xD7,0xDD,0xB8,0xCD,0xDE,0xC2,' ' ,0xB8,0xD0,0xB1,0xDC,0xBE,0x00};
+    char saving[2][9]= {{0xCE,0xBF,0xDE,0xDD,0xC1,0xAD,0xB3,' ' ,0x00}      //ﾎｿﾞﾝﾁｭｳ
+                   ,{0xCE,0xBF,0xDE,0xDD,0xBC,0xCF,0xBC,0xC0,0x00}};      //ﾎｿﾞﾝｼﾏｼﾀ
+    int secondCnt = 0;                        //一定数に達したら準最適値処理開始
+    int *stay_cnt = new int[product.head];      //滞留警告判断のためのカウント変数
+    //float res = load.target + load.jougen;    //組み合わせ重量の上限値を取得
+    res = load.target + load.jougen;    //組み合わせ重量の上限値を取得
+    cntData_t cnt= {0,0,0};                     //カウント機能の値保持用
+    combiData_t orderCombi[BK_CNT] = {0,0.0,0};   //組み合わせ候補のデータ(配列)
+    combiData_t orderCombi2[BK_CNT] = {0,0.0,0};   //組み合わせ候補のデータ(配列)
+    combiData_t orderCombi3[BK_CNT] = {0,0.0,0};   //組み合わせ候補のデータ(配列)
+    combiData_t resultCombi;                    //組み合わせ結果(最小値取得用)
+    mweight = file.get_lweight(file.get_preset()); //現在プリセット選択されているデータを取得
+    cnt.nowMode = load.spMode;       //処理モード取得
+    cnt_miss_and_kikakugai=0;      //取り間違いと規格外が発生した回数
+    cnt_junsaiteki=0;               //準最適値が発生した回数
+    int btnset =0;//計量中の下ボタン押しで出てくる値保存
+    int SerialNumber = 0; //USBを連続で使用する際の連番値
+    int first_target = load.target;
+    int first_jougen = load.jougen;
+    int scond_target = load.taimenTarget;
+    int scond_jougen = load.taimenJougen;
+    int befour_oya_weight = 0; //lcd表示用の変数。anteiweighが０だった時に使う
+    no_combi_v_flg = false;
+    int go_combi_flg = 0;  //組合せを行うかを決めるフラグ
+    set_stopcell();
+    lcd.cls();
+    //1行目LCD表示
+    //lcd.settings(&load);      //設定内容を表示
+    if(product.productType %100 == MATRIX || product.matrix_mode == MATRIX_ON) {
+        for(int l=0;l<product.head;l++){
+            iro[l]=C_NUSE;
+        }
+    }
+
+    //作業開始時間記録
+    seconds = time(NULL);
+    tm *dated3 = localtime(&seconds);
+    run_date.tm_year = dated3->tm_year+1900;
+    run_date.tm_sec  = dated3->tm_sec;
+    run_date.tm_min  = dated3->tm_min;
+    run_date.tm_hour = dated3->tm_hour;
+    run_date.tm_mday = dated3->tm_mday;
+    run_date.tm_mon  = dated3->tm_mon+1;
+    run_date.tm_year = dated3->tm_year+1900;
+    //
+    //printf("st%d:%d:%d\r\n",run_date.tm_hour,run_date.tm_min,run_date.tm_sec);
+
+    for(int l; l<product.head; l++) {
+        nowweightVale3[l]=0.0;
+    }
+
+    if(product.use_usb==1 && option.usb_EN==true){
+        //SerialNumber = USB_filecheck();
+        SerialNumber = USB_filecheck2(run_date.tm_year,run_date.tm_mon,run_date.tm_mday,run_date.tm_hour,run_date.tm_min);
+        if(SerialNumber<999){
+            /*lcd.blank(0);
+            lcd.blank(1);
+            lcd.locate(0,1);
+            lcd.printf(SAVEEROK[1]);
+            se.OK();    //警告音
+            //wait(3);
+            lcd.blank(0);
+            lcd.blank(1);*/
+        }
+    }
+
+    //準最適値を行うヘッド数は、HEAD数より
+    //大きい値はありえない(エラー対策)
+    if(bscData.startKinji > product.head) {
+        bscData.startKinji = product.head;
+    }
+    tm *dated4 = localtime(&seconds);
+    if(product.limit_on==NUMBER_LIMIT) {
+        set_count_force(&cnt);
+    }
+    if(product.productType %100 == MATRIX || product.matrix_mode == MATRIX_ON) {
+        for(int l=0;l<product.head;l++){
+            iro[l]=C_NULL;
+        }
+    }
+    meas_rap.attach( &rap_count, 0.1);  
+    
+    
+    for(int i = 0; i < product.head; i++) {
+        if(i == 0){
+            iro[i] = C_NUSE;
+        }else if(i == 1){
+            iro[i] = C_NULL;
+        }else{
+            iro[i] = C_NUSE;
+        }
+    }  
+    while(1) {
+        /*if(product.productType %100 == MATRIX || product.matrix_mode == MATRIX_ON) {
+            for(int l=0;l<product.head;l++){
+                if(iro[l]==C_NULL){
+                    iro[l]=C_NUSE;
+                }
+            }
+        }*/
+    //******ボタン設定start********************************************************
+        btn.new_keep_btn();         //スイッチ(New)取得
+        if(product.limit_on==NUMBER_LIMIT) {
+            if(kumi_en_check()==false) {
+                se.mistake();                   //警告音
+                v.over_limit();
+                btn.force_ESC();
+            } else {
+            }
+        }
+        //esc_swを押すと、Menu画面に戻る
+        if(btn.esc_press()||(demo_flg==true&&demo_continue!=0&&file.get_preset()==product.head*2)) {
+            meas_rap.detach();
+            se.Touch_01();
+            //if((load.kumi_flag == KUMI_NONE || load.kumi_flag == KUMI_LIMIT || load.kumi_flag == KUMI_COMBI )&& total_kumi_cnt>0) {
+            if((load.kumi_flag == KUMI_NONE || load.kumi_flag == KUMI_LIMIT)&& total_kumi_cnt>0) {
+                //seconds = time(NULL);
+                //tm *dated4 = localtime(&seconds);
+                //printf("en%d:%d:%d\r\n",dated4->tm_hour,dated4->tm_min,dated4->tm_sec);
+                int ji=0;
+                int hun=0;
+                ji = dated4->tm_hour - run_date.tm_hour;
+                if(ji<0) {
+                    ji += 24;
+                }
+                hun = dated4->tm_min - run_date.tm_min;
+                if(hun<0) {
+                    hun += 60;
+                    ji -= 1;
+                }
+                lcd.blank(1);
+                lcd.blank(0);
+                lcd.locate(0,1);
+                lcd.printf("                ");
+                lcd.locate(0,1);
+                if(product.use_usb==1 && option.usb_EN==true) {
+                    lcd.printf(saving[0]);
+                }
+                if(product.use_usb==1 && option.usb_EN==true) {
+                    file.save_SAGYOU(ji,hun,file.get_preset()+1,load.target,total_kumi_cnt,average_kumi_value);
+                }
+                //save_sagyou_file(total_kumi_cnt,average_kumi_value,load.target,load.jougen);
+                if(product.use_usb==1 && option.usb_EN==true) {
+                    //save_sagyou_file2(total_kumi_cnt,average_kumi_value,load.target,load.jougen,ji,hun,SerialNumber);
+                    save_sagyou_file2_date(total_kumi_cnt,average_kumi_value,load.target,load.jougen,ji,hun,SerialNumber,run_date.tm_year,run_date.tm_mon,run_date.tm_mday,run_date.tm_hour,run_date.tm_min);
+                }
+                //save_sagyou_file3(total_kumi_cnt,average_kumi_value,load.target,load.jougen,ji,hun,SerialNumber);
+                if(product.use_usb==1 && option.usb_EN==true) {
+                    SD_initialise();
+                }
+                if(product.use_usb==1 && option.usb_EN==true) {
+                    lcd.blank(1);
+                    lcd.blank(0);
+                    lcd.locate(0,1);
+                    lcd.printf("                ");
+                    lcd.printf(saving[1]);
+                }
+            }
+            delete[] stay_cnt;
+            total_kumi_cnt = 0;
+            average_kumi_value = 0;
+            btn.old_btn();       //スイッチ更新
+            btn.new_btn();       //スイッチ更新
+            return;
+        }
+
+        //上ボタンが離されたら、操作ロック解除
+        if( btn.down_press() == false) {
+            btn.operation_unlock();
+        }
+
+        //ent_swを押すと、ゼロ点調整（風袋引き）する
+        if(btn.get_btn() == BTN_ENT) {
+            auto_zero_point();
+            //1行目LCD表示
+            lcd.cls();
+            //lcd.settings(&load);      //設定内容を表示
+            //ｶｳﾝﾄorｹｲﾘｮｳﾓｰﾄﾞ
+        } else if(btn.up_press() == true) {
+            se.chime_01();
+            btn.end_force();
+            while(btn.any_press()==true){
+                if(demo_flg==true&&btn.down_press() == true&&file.get_preset()==product.head*2){
+                    demo_continue=2;
+                    btn.force_ESC();
+                    se.Touch_01();
+                    continue;
+                }
+                wait(0.1);
+            }
+            if(demo_flg==true&&demo_continue!=0&&file.get_preset()==product.head*2){
+                    demo_continue=2;
+                    btn.force_ESC();
+                    continue;
+            }
+            btn.old_btn();       //スイッチ更新
+            btn.new_btn();       //スイッチ更新
+            if(load.kumi_flag == KUMI_OYAKO || load.kumi_flag == KUMI_OYAKO_HALF) {
+                btnset = Chenge_vaule_btnD(0);
+                if(btnset==0) {
+                    auto_zero_off = true;
+                    start_keiryo(0);
+                    auto_zero_off = false;
+                } else if(btnset==1) {
+                    set_preset2(file.get_preset(),TL_SPMODE);
+                }else if(btnset==2){
+                    set_option_setting(OP_BEGINNER);
+                }else if(btnset==3){
+                    set_option_setting(OP_KIKAKUGAI_V);
+                }else if(btnset==4){
+                    set_option_setting(OP_KOKUTI);
+                }else if(btnset==5){
+                    set_option_setting(OP_SEL_BEEP);
+                }else if(btnset==6){
+                    set_sercret_parameter_one(P_buffer,1); //保存指令付
+                }else if(btnset==7){
+                    set_option_setting(OP_NO_COMBI_V);
+                } 
+            }
+            if(load.kumi_flag == KUMI_DENSO) {
+                btnset = Chenge_vaule_btnD(0);
+                if(btnset==0) {
+                    auto_zero_off = true;
+                    start_keiryo(0);
+                    auto_zero_off = false;
+                }else if(btnset==1){
+                    set_option_setting(OP_NUMBER_COLOR);
+                //}else if(btnset==2){
+                //    set_option_setting(OP_NUMBER_COLOR);
+                } 
+            }
+            //ゆっくりモード時には、
+            else if(load.spMode == SPEED_LOW) {
+                btnset = Chenge_vaule_btnD(option.btn_sett);//ｶｳﾝﾄorｹｲﾘｮｳﾓｰﾄﾞ
+                if(btnset==0) {
+                    set_count(&cnt);
+                } else if(btnset==1) {
+                    auto_zero_off = true;
+                    start_keiryo(0);
+                    auto_zero_off = false;
+                }else if(btnset==2){
+                    set_preset2(file.get_preset(),TL_SPMODE);
+                }else if(btnset==3){
+                    set_preset2(file.get_preset(),TL_KUMI_FLAG);
+                }else if(btnset==4){
+                    set_option_setting(OP_BEGINNER);
+                }else if(btnset==5){
+                    set_option_setting(OP_KIKAKUGAI_V);
+                }else if(btnset==6){
+                    set_option_setting(OP_KOKUTI);
+                }else if(btnset==7){
+                    set_option_setting(OP_SEL_BEEP);
+                }else if(btnset==8){
+                    set_sercret_parameter_one(P_buffer,1); //保存指令付
+                }else if(btnset==9){
+                    set_option_setting(OP_NO_COMBI_V);
+                }
+            } else if(load.spMode == SPEED_HIGH || load.spMode == SPEED_HYPER) {
+                btnset = Chenge_vaule_btnD(0);
+                if(btnset==0) {
+                    set_preset2(file.get_preset(),TL_HYOUJI);
+                } else if(btnset==1) {
+                    auto_zero_off = true;
+                    start_keiryo(0);
+                    auto_zero_off = false;
+                }else if(btnset==2){
+                    set_preset2(file.get_preset(),TL_SPMODE);
+                }else if(btnset==3){
+                    set_preset2(file.get_preset(),TL_KUMI_FLAG);
+                }else if(btnset==4){
+                    set_sercret_parameter_one(P_buffer,1); //保存指令付
+                }else if(btnset==5){
+                    set_option_setting(OP_NO_COMBI_V);
+                }else if(btnset==6){
+                    set_option_setting(OP_KOKUTI);
+                }
+            }
+            //1行目LCD表示
+        }
+
+        btn.old_btn();       //スイッチ更新
+        
+    //******ボタン設定end********************************************************
+
+    //******計量start*******************************************************
+        for(int i = 0; i < product.head; i++) {
+            if(i==1){
+                cel.set_head(i);
+                cel.setAin_zero(i);
+            }else{
+                setHeadVolt(i, param.KURI);
+            }   
+        }//for
+        //デバッグ用ここから
+        if( product.productType >= STANDARD_D || product.productType == JUNIOR_D || product.productType == BIG_D || product.productType == MATRIX_D) {
+            for(int i = 0; i < product.head; i++) {
+                //temp = cel.temperature();   //温度を取得する
+                //for(int i = 0; i < product.head; i++){
+                //cel.set_head(i);
+                cel.set_head(i);
+                pc.printf("%02d: %6.3f %6.3f %6.3f   %0.8f\r\n", i+1,cel.getWeight(i),cel.anteiWeight(i), cel.get_HWeight(i),cel.getAin());
+                //}
+                if(i == product.head - 1) {
+                    //printf("%d %f C\r\n",14, temp);
+                    pc.printf("========================\r\n");
+                    pc.printf("========================\r\n");
+                    pc.printf("========================\r\n");
+                }
+            }
+        }
+        //デバッグ用ここまで
+    //******計量end*******************************************************
+        
+        //第2上限値適用するか否か
+        if(option.second_target == 1){
+            antei_checker=0;
+            for(int i = 0; i < product.head; i++) {
+                if(cel.anteiWeight(i)>0){
+                    antei_checker = antei_checker | (1 << i);
+                }
+            }
+            if( load.kumi_flag <= KUMI_LIMIT && scond_target >= 0 && (bit_count(antei_checker) >= (bscData.startKinji-bit_count(stop_cells)))){
+                load.target = scond_target;
+                load.jougen = scond_jougen;
+            }else{
+                load.target = first_target;
+                load.jougen = first_jougen;
+            }
+        }//第2上限値ここまで
+        
+        
+        
+    //******親ヘッドの状況確認start*********************************
+        //******親ヘッド重量表示
+        
+        if(cel.anteiWeight(0) > param.CUT){ //CUT以下
+            befour_oya_weight = int(cel.anteiWeight(0));
+        }else if(cel.getWeight(0) < param.CUT){
+            befour_oya_weight = 0;
+        }
+            
+            
+        if(cel.anteiWeight(0) < param.CUT){ //CUT以下
+            if(cel.getWeight(0) < param.CUT){
+                lcd.bigNumber(befour_oya_weight); //大文字で重量を表示
+            }else{
+                lcd.bigNumber(0); //大文字で重量を表示
+            }
+        }else{
+            lcd.bigNumber(int(cel.anteiWeight(0))); //大文字で重量を表示
+        }
+    
+    
+    
+        go_combi_flg=0;
+        if(cel.anteiWeight(0) < param.CUT){ //CUT以下
+            go_combi_flg=0;
+        }else if(cel.anteiWeight(0) < load.target){
+            go_combi_flg=1;
+        }else if(load.target < cel.anteiWeight(0) && cel.anteiWeight(0) < load.target + load.jougen){ ///目標内
+            iro[0] = C_MARU;
+            go_combi_flg=2;
+            
+        }else{  //目標以上
+            go_combi_flg=3;
+        }
+        
+        
+        
+    
+    //******親ヘッドの状況確認end****************************************
+        
+        
+        //1行目LCD表示
+        //lcd.settings(&load);      //設定内容を表示(大文字表示で内容が非表示となるため再表示する)
+        //重量確認(適正でない重量があるため処理を飛ばす)
+        //if(check_max_weight(cel.over_weight()) == false) {
+        //    continue;
+        //}
+        
+        if(combi_chk==0){
+            combi_chk=1;
+        }else {
+            combi_chk=0;
+        }
+    
+        resultCombi.kumi = 0;
+        resultCombi.total = 0;
+        resultCombi.priolity = 0;
+        for(int i = 0; i < BK_CNT; i++) {
+            orderCombi[i].kumi = 0;
+            orderCombi[i].total = 0;
+            orderCombi[i].priolity = 0;
+            orderCombi2[i].kumi = 0;
+            orderCombi2[i].total = 0;
+            orderCombi2[i].priolity = 0;
+            orderCombi3[i].kumi = 0;
+            orderCombi3[i].total = 0;
+            orderCombi3[i].priolity = 0;
+        }
+                
+        if(go_combi_flg == 0 || go_combi_flg == 1){
+            get_combi_location_denso(orderCombi, orderCombi2, orderCombi3, &secondCnt);     //組み合わせ確認,組み合わせ候補を抽出
+            resultCombi = orderCombi[0];                    //最小組み合わせ結果を取得
+
+
+            //振動検知機能がONだったら
+            if(param.vivration >= 1) {
+                //繰り返し確認する
+                for(int i = 0; i < BK_CNT; i++) {
+                    //組み合わせ候補が安定しているか
+                    if(checkWeightTaget(&orderCombi[i]) == true) {
+                        resultCombi = orderCombi[i];
+                        break;
+                    }
+                    if(checkWeightTaget(&orderCombi2[i]) == true) {
+                        orderCombi2[0] = orderCombi2[i];
+                        break;
+                    }
+                    if(checkWeightTaget(&orderCombi3[i]) == true) {
+                        orderCombi3[0] = orderCombi3[i];
+                        break;
+                    }
+                }
+            }
+            /*int gg =0;
+            printf("1  ");
+            gg = 0;  printf("%3d:%5d  ",gg,orderCombi[gg].kumi);
+            gg = 1;  printf("%3d:%5d  ",gg,orderCombi[gg].kumi);
+            gg = 2;  printf("%3d:%5d  ",gg,orderCombi[gg].kumi);
+            gg = 3;  printf("%3d:%5d  ",gg,orderCombi[gg].kumi);
+            gg = 4;  printf("%3d:%5d  ",gg,orderCombi[gg].kumi);
+            gg = 5;  printf("%3d:%5d  ",gg,orderCombi[gg].kumi);
+            gg = 6;  printf("%3d:%5d\r\n",gg,orderCombi[gg].kumi);
+            printf("2  ");
+            gg = 0;  printf("%3d:%5d  ",gg,orderCombi2[gg].kumi); 
+            gg = 1;  printf("%3d:%5d  ",gg,orderCombi2[gg].kumi);
+            gg = 2;  printf("%3d:%5d  ",gg,orderCombi2[gg].kumi);
+            gg = 3;  printf("%3d:%5d  ",gg,orderCombi2[gg].kumi);
+            gg = 4;  printf("%3d:%5d  ",gg,orderCombi2[gg].kumi);
+            gg = 5;  printf("%3d:%5d  ",gg,orderCombi2[gg].kumi);
+            gg = 6;  printf("%3d:%5d\r\n",gg,orderCombi2[gg].kumi);
+            printf("3  ");
+            gg = 0;  printf("%3d:%5d  ",gg,orderCombi3[gg].kumi);
+            gg = 1;  printf("%3d:%5d  ",gg,orderCombi3[gg].kumi);
+            gg = 2;  printf("%3d:%5d  ",gg,orderCombi3[gg].kumi);
+            gg = 3;  printf("%3d:%5d  ",gg,orderCombi3[gg].kumi);
+            gg = 4;  printf("%3d:%5d  ",gg,orderCombi3[gg].kumi);
+            gg = 5;  printf("%3d:%5d  ",gg,orderCombi3[gg].kumi);
+            gg = 6;  printf("%3d:%5d\r\n",gg,orderCombi3[gg].kumi);
+            printf("\r\n");*/
+            
+            for(int i = 0; i < BK_CNT; i++) {
+                //printf("%2d :%4d :%6.1f:%4d\r\n",i,orderCombi[i].kumi,orderCombi[i].total,orderCombi[i].priolity);
+                if(orderCombi[i].kumi>0){
+                    resultCombi.kumi = resultCombi.kumi |  orderCombi[i].kumi;
+                }
+            }
+            //printf("end\r\n\r\n");
+            
+            //1行目LCD表示
+            //lcd.settings(&load);      //設定内容を表示(大文字表示で内容が非表示となるため再表示する)
+        }else{
+                
+            
+        }
+        if(resultCombi.kumi>0){
+            //lcd.cls();
+            //show_results_denso(&resultCombi);     //組み合わせに応じたLED点灯,総重量表示
+            
+            for(int i = 0; i <= product.head ; i += 1) {
+                //printf("%3d:%5d:%5d:%5d\r\n",i,resultCombi.kumi,1 << i,gOyaHead);
+                if((resultCombi.kumi & (1 << i)) > 0){
+                    //printf("OK\r\n");
+                    if((gOyaHead & (1 << i)) > 0){
+                        iro[i] = C_NULL;
+                    }else{
+                        iro[i] = C_MARU;
+                    }
+                }else{
+                    iro[i] = C_NULL;
+                }
+            }
+            
+        }else if(orderCombi2[0].kumi>0){
+            //lcd.cls();
+            for(int i = 0; i <= product.head ; i += 1) {
+                //printf("%3d:%5d:%5d:%5d\r\n",i,orderCombi2[0].kumi,1 << i,gOyaHead);
+                if((orderCombi2[0].kumi & (1 << i)) > 0){
+                    //printf("OK\r\n");
+                    if((gOyaHead & (1 << i)) > 0){
+                        iro[i] = C_NULL;
+                    }else{
+                        iro[i] = C_R_MARU;
+                    }
+                }else{
+                    iro[i] = C_NULL;
+                }
+            }
+        }else if(orderCombi3[0].kumi>0){
+            /*//lcd.cls();
+            for(int i = 0; i <= product.head ; i += 1) {
+                //printf("%3d:%5d:%5d:%5d\r\n",i,orderCombi3[0].kumi,1 << i,gOyaHead);
+                if((orderCombi3[0].kumi & (1 << i)) > 0){
+                    //printf("OK\r\n");
+                    if((gOyaHead & (1 << i)) > 0){
+                        iro[i] = PENTA_R;
+                    }else{
+                        iro[i] = PENTA_R;
+                    }
+                }else{
+                    iro[i] = C_NULL;
+                }
+            }
+            if(cel.anteiWeight(0) < param.CUT){ //CUT以下
+                iro[0] = C_NUSE;
+            }else if(cel.anteiWeight(0) < load.target){
+                iro[0] = CR_01 - 1 + (load.target - int(cel.anteiWeight(0)));
+                if(iro[0] < CR_01){iro[0] = CR_01;}
+            }else if(load.target < cel.anteiWeight(0) && cel.anteiWeight(0) < load.target + load.jougen){ ///目標内
+                iro[0] = C_MARU;
+            }else if(load.target + load.jougen < cel.anteiWeight(0)) {  //目標以上
+                iro[0] = CG_01 - 1  + (int(cel.anteiWeight(0) - (load.target + load.jougen)));
+            }else{  //目標以上
+                iro[0] = C_NUSE;
+            }
+            */
+        }else{
+            if(cel.anteiWeight(0) < param.CUT){ //CUT以下
+                iro[0] = C_NUSE;
+            }else if(cel.anteiWeight(0) < load.target){
+                iro[0] = CR_01 +((CG_01-CR_01) * option.number_color) - 1 + (load.target - int(cel.anteiWeight(0)));
+                if((load.target - int(cel.anteiWeight(0))) > 99){
+                    iro[0] = C_NUSE;
+                }                
+                //if(iro[0] < CR_01){iro[0] = CR_01;}
+            }else if(load.target < cel.anteiWeight(0) && cel.anteiWeight(0) < load.target + load.jougen){ ///目標内
+                iro[0] = C_MARU;
+            }else if(load.target + load.jougen < cel.anteiWeight(0)) {  //目標以上
+                iro[0] = CG_01 -((CG_01-CR_01) * option.number_color)  - 1  + (int(cel.anteiWeight(0) - (load.target + load.jougen)));
+                if((int(cel.anteiWeight(0) - (load.target + load.jougen))) > 99){
+                    iro[0] = C_BATU;
+                }
+            }else{  //目標以上
+                iro[0] = C_NUSE;
+            }
+            
+            for(int i = 2; i < product.head; i++) {
+                if(iro[0] == C_MARU){
+                    iro[i] = C_NULL;
+                }else{
+                    iro[i] = C_NUSE;
+                }
+            }
+        }
+        
+    }//while
+}
+
+/////////////////////////////////////////////////////////////////////////////////
+//重量組合せ関数
+//すべての組合せ結果を計算する！
+/////////////////////////////////////////////////////////////////////////////////
+//int combi_OK = 0;
+void get_combi_location_denso(combiData_t com[], combiData_t com2[], combiData_t com3[], int *secondCnt)
+{
+    int bit,bk,in = 0; //in:物が載っている場所を取得
+    int bit_num=0;    //成立した個数の保存
+    double sum=0;   //組み合わせ候補箇所の重量を合算していく
+    float min = float(load.target) + param.buffer;  //最小値(バッファー有り)
+    float res = load.target + load.jougen;    //組み合わせ重量の上限値を取得
+    float resDefault = res;                   //上限値のデフォルト値をここでバックアップ
+    bool checkBtnJunsaiteki = false;            //ボタン押下で準最適値モードになったか
+    bool combi_OK_flug = false;             //１個でも成立した物があるか
+    int combi_flg =0;                       //組合せ内容0:無し 1:１個　2:親子11 3:親子12　4:子のみ
+
+    ArrayIni(com, BK_CNT);   //初期化(組み合わせ保持している分を初期化)
+    ArrayIni(com2, BK_CNT);   //初期化(組み合わせ保持している分を初期化)
+    
+    in = cel.getAnteiIn();   //計量物の数を取得
+
+    //計量物ないなら即終了
+    if(in == 0) {
+        return;
+    }
+
+    //各計量皿の重量値(クラスから重量取得をループ内で行うと
+    //時間がかかるらしいのでローカル変数に重量をコピー)
+    float *weight = new float[product.head];
+    float maxWeight = 0, minWeight = 0;
+
+    for(int i = 0; i < product.head; i++) {
+        weight[i] = cel.anteiWeight(i);
+    }
+
+    //上ボタン(赤)が押されたら強制的に準最適値機能を1回だけON
+    if( btn.down_press() == true && btn.get_lock_flg() == false) {
+        btn.operation_lock();   //上ボタンを押している間
+        res = KINJITI_MAX_WHIGHT;
+        checkBtnJunsaiteki = true;  //準最適値機能を強制ON状態
+        //準最適値開始する条件が満たされているか確認
+        //計量物が必要なだけ皿数、載っているか
+    } else if(load.secondOnOff == 1 && (bit_count(in) >= (bscData.startKinji-bit_count(stop_cells)))) {
+        *secondCnt += 1;
+        if(*secondCnt >= gStartKinjiti) {
+            res = KINJITI_MAX_WHIGHT;
+        }
+        //桁あふれしないように念のため0で初期化
+        if(*secondCnt > 1000) {
+            *secondCnt = 0;
+        }
+    } else if(junsaiteki_loop == 1) {
+        btn.operation_lock();   //上ボタンを押している間
+        res = KINJITI_MAX_WHIGHT;
+    } else {
+        *secondCnt = 0;
+    }
+    //if(load.secondOnOff == 1 && (bit_count(in) < (bscData.startKinji-bit_count(stop_cells)))) {
+    //    no_combi_v_flg = false;
+    //}
+    combi_OK = 0;
+    //計量物がある分だけ組み合わせ確認を行う
+    for(int i=in; i; i--) {
+
+        //組み合わせ候補に重量ゼロがあれば次の組み合わせ候補へ
+        if( (in & i) != i) continue;
+
+        //比較用変数を初期化
+        maxWeight = 0;
+        minWeight = 6000;
+
+        //ビット1になっている箇所の重量を取得していく
+        //bkはbitが立っている場所の重量値を取得するために使用
+        //sumは取得する重量値の合計重量を保持
+        sum = 0;
+        bk = i;
+
+        //総重量取得処理
+        for(bit = 0; bk; bk >>= 1) {
+            if (bk & 0x01) {
+                sum += weight[bit] - MINUS;
+                if((load.kumi_flag == KUMI_OYAKO || load.kumi_flag == KUMI_DENSO)
+                    && (oneBit[bit] & gOyaHead) > 0){
+                }else{
+                    if( maxWeight < weight[bit]) maxWeight = weight[bit];   //最重量値の場合は値取得
+                    if( minWeight > weight[bit]) minWeight = weight[bit];   //最軽量値の場合は値取得
+                }
+            }
+            bit++;
+        }
+        //不揃い防止値(設定重量)より最大値、最小値の差があれば処理終了
+        if( (maxWeight - minWeight) > load.fuzoroiBoushi && load.fuzoroiBoushi > 0) {
+            continue;
+        }
+        //printf("%6.1f\r\n",sum);
+        //printf("%6.1f",sum);
+        //if(sum < min || (int(sum) > int(res))){
+        //    printf("NG\r\n");
+        //}
+        //一番最適な重量を取得する
+        if((sum >= min) && (int(sum) <= int(res))) {
+        /*if((load.kumi_flag!=KUMI_LIMIT && (( sum >= min                                      ) && (int(sum) <= int(res)))) ||
+          ((float(bit_count(i))*param.buffer2<float(res))&&
+          (load.kumi_flag==KUMI_LIMIT && (((sum >= (float(min) + (float(bit_count(i))*param.buffer2))) && (int(sum) <= int(res)))))) ||
+          (load.kumi_flag==KUMI_LIMIT && (int(sum) >= int(res)) && (int(sum) <= int(res))))
+          
+        {*/
+            //printf(":x > min:");
+
+            //指定された組み合わせ条件を満たしているか確認
+            
+            
+            //printf("%6.1f :%4d:%4d:%4d\r\n",sum,i,i & gOyaHead,bit_count(i));
+            
+            
+            //親の位置に計量物無い、親同士が組み合わせ対象の場合処理抜け
+            combi_flg = 0;
+            if(i & gOyaHead == 1 && bit_count(i) == 1){
+                combi_flg = 1;
+            }else if((i & gOyaHead == 1) && (bit_count(i) == 2)){
+                combi_flg = 2;
+            }else if((i & gOyaHead == 1) && (bit_count(i) == 3)){
+                combi_flg = 3;
+            }else if(/*(i & gOyaHead == 0) && */(bit_count(i) == 2)){
+                combi_flg = 4;
+                //printf("AAA\r\n");
+            }else{
+                continue;
+            }
+            //printf("%4d\r\n",combi_flg);
+            
+            
+            
+            
+            //if(((bits & gOyaHead) == 0) || ( bit_count((bits & gOyaHead)) == 2) || (bit_count(bits & gKoHead) < 1) || (bit_count(bits & gKoHead) < load->kumi_min+1) || bit_count(bits & gKoHead) > load->kumi_max+1) {
+            //    continue;
+            //}
+            
+            
+            
+            //printf("\r\n");
+
+            //組み合わせ成立があるならば
+            //準最適値処理は行わない
+                //printf("OK?\r\n");
+                
+                //printf("%6.1f:%6d\r\n",sum,int(resDefault));
+            if(int(sum) <= int(resDefault)/* || combi_OK != 0*/) {
+                *secondCnt = 0;
+                combi_OK_flug = true;
+                //printf("OK\r\n");
+            }
+                //printf("OK?\r\n");
+
+            //準最適値「組合せなし」通知は不要
+            checkBtnJunsaiteki = false;
+
+            // ******************
+            //値を取得
+            //*******************
+            if(combi_flg == 1 || combi_flg == 2){
+                com[BK_CNT -1].kumi = i;
+                com[BK_CNT -1].total = sum;
+                qsort(com, BK_CNT, sizeof(combiData_t), comp );
+            }else if(combi_flg == 3){
+                com2[BK_CNT -1].kumi = i;
+                com2[BK_CNT -1].total = sum;
+                qsort(com2, BK_CNT, sizeof(combiData_t), comp );
+            }else if(combi_flg == 4){
+                com3[BK_CNT -1].kumi = i;
+                com3[BK_CNT -1].total = sum;
+                qsort(com3, BK_CNT, sizeof(combiData_t), comp );
+            }
+            
+                
+                
+                
+            //  for (int j=0;j<BK_CNT -1;j++){
+            //       pc.printf("%d  %4f  %2d  \r\n",com[j].kumi, com[j].total,com[j].priolity);
+            //  }
+
+            //res(組合せ重量)を更新
+            if(com[BK_CNT-1].total != DAMMY_MAX) {
+                //res = com[BK_CNT-1].total;
+            }
+        }
+    }//loop終了
+
+    //組み合わせ成立があるならば
+    //準最適値のデータを消す
+    if(combi_OK_flug == true){//
+        //printf("DELETE\r\n");
+        for(int i = 0; i < BK_CNT; i++) {
+            //printf("%2d :%4d :%6.1f:%4d\r\n",i,com[BK_CNT].kumi,com[BK_CNT].total,com[BK_CNT].priolity);
+            if(com[i].total > int(resDefault)){
+                com[i].kumi = 0;
+                com[i].total = 1;
+                com[i].priolity = 999;
+                //printf("reset\r\n");
+            }
+            if(com2[i].total > int(resDefault)){
+                com2[i].kumi = 0;
+                com2[i].total = 1;
+                com2[i].priolity = 999;
+                //printf("reset\r\n");
+            }
+            if(com3[i].total > int(resDefault)){
+                com3[i].kumi = 0;
+                com3[i].total = 1;
+                com3[i].priolity = 999;
+                //printf("reset\r\n");
+            }
+        }
+    }
+
+    //ボタン操作で準最適値モードON後、
+    //一つも組合せなければ「組合せがない」ことを通知する
+    
+    //printf("%5d ,%5d,%5d,%8.1f,%8.1f,%5d%5d ,\r\n",bit_count(in),bscData.startKinji-bit_count(stop_cells),bit_count(stop_cells),res,com[0].total,KINJITI_MAX_WHIGHT,int(sum));
+    if(combi_OK == 0 && Compulsion_no_combi_v_flg == false){
+        if( ((checkBtnJunsaiteki == true) && (res == KINJITI_MAX_WHIGHT))) {
+            v.output_audio(MSG_NO_JUNSAITEKI);
+            v.wait_echo();
+        }else if((int(com[0].total) == DAMMY_MAX) && (bit_count(in) >= (bscData.startKinji-bit_count(stop_cells)))){
+            if((     bit_count(in) >= (product.head-bit_count(stop_cells))) //||   //全ての皿に物が載った
+              /*((load.katamen > 0) && (bit_count(in) >= ((bscData.startKinji/2)-bit_count(stop_cells))))*/){
+                if(no_combi_v_flg == false){
+                    if(option.no_combi_v==1){
+                        v.output_audio(MSG_NO_JUNSAITEKI);
+                        v.wait_echo();
+                    }else if(option.no_combi_v==2){
+                        se.Touch_02();
+                        se.Touch_02();
+                        se.Touch_02();
+                        se.Touch_02();
+                    }
+                    no_combi_v_flg = true;
+                }
+            }else if((bit_count(in) >= (bscData.startKinji-bit_count(stop_cells))) //||  //準最適値の設定皿数に達した
+              /*((load.katamen > 0) && (bit_count(in) >= ((bscData.startKinji/2)-bit_count(stop_cells))))*/){
+                if(no_combi_v_flg == false){
+                    if(option.no_combi_v==1){
+                        v.output_audio(MSG_NO_JUNSAITEKI);
+                        v.wait_echo();
+                    }else if(option.no_combi_v==2){
+                        se.Touch_02();
+                        se.Touch_02();
+                        se.Touch_02();
+                        se.Touch_02();
+                    }
+                    no_combi_v_flg = true;
+                }
+            }
+        }
+    }else{
+        no_combi_v_flg = false;
+    }
+
+    delete[] weight;
+    return;
+}
+
+//最適重量組合せ結果表示関数(通常の組み合わせ)
+void show_results_denso(const combiData_t *com){
+    float res = load.target + load.jougen;    //組み合わせ重量の上限値を取得
+    combiData_t orderCombi[BK_CNT] = {0,0.0,0};   //組み合わせ候補のデータ(配列)
+    combiData_t resultCombi;
+    const char kumiawase[]={0xB8,0xD0,0xB1,0xDC,0xBE,0x00};      //ｸﾐｱﾜｾ
+
+    int on_cell =0; //皿に何か載っているか確認する変数
+    //int hyper_kumi =0;  //準最適値時に最初に入力した値を保存する変数
+    //int hyper_total =0; //準最適値時に最初に入力した値を保存する変数
+    //int loop_cel =0;      //ユックリモード時のループ回数
+
+    //組み合わせ内容表示分をクリア
+    //lcd.blank(LOW);
+    //組み合わせなければ処理終了
+    if(com->kumi == 0) {
+        led.REGIS(com->kumi);
+        //if(load.kumi_flag == KUMI_KAIKYU && (product.productType %100 == MATRIX || product.matrix_mode == MATRIX_ON)){
+        if((product.productType %100 == MATRIX || product.matrix_mode == MATRIX_ON)) {
+            noCombiNews();
+        } else {
+            noCombiNews();
+        }
+        if(load.kumi_flag <= KUMI_LIMIT){//組合せの場合は下段に「ｸﾐｱﾜｾ」を表示する
+            lcd.locate(9,1);
+            lcd.printf(kumiawase);
+            lcd.locate(0,1);
+        }
+        return;
+    }
+    //loop_cel=0;
+    on_cell =0;
+    for(int on_c=0; on_c < product.head; on_c++) {
+        on_cell += oneBit[on_c];
+    }
+    //準最適値表示の場合は大文字表示
+    if(int(com->total) > res) {
+        lcd.bigNumber(com->total); //大文字で重量を表示
+        //}
+
+        if(product.productType %100 == MATRIX || product.matrix_mode == MATRIX_ON) {
+            //led.REGIS3(com->kumi);
+            led.REGIS(com->kumi);
+        } else {
+            led.REGIS(com->kumi);
+        }
+
+        //ゆっくりモード,上ボタン押下で、準最適値モードだったら音鳴らして終了
+        //(ここの時点ではSlolyに行く動作か、ユックリモード内のループ中か判断できない)
+        if(btn.get_lock_flg() == true && load.spMode == SPEED_LOW/* && product.limit_on != WIDE_LIMIT*/){
+            se.Touch_02();
+            //return;
+        }else if(load.spMode == SPEED_LOW /*&& product.limit_on != WIDE_LIMIT*/){
+        //ゆっくりモードだったら終了
+            //return;
+        }
+/* 組み合わせ成立有りの処理を実行 */
+    } else {
+        lcd.blank(LOW);
+        if(load.kumi_flag <= KUMI_LIMIT){//組合せの場合は下段に「ｸﾐｱﾜｾ」を表示する
+            lcd.locate(9,1);
+            lcd.printf(kumiawase);
+            lcd.locate(0,1);
+        }
+        if( product.productType == BIG || product.productType == BIG_D) {
+            //OneWeight=cel.getWeight(3);//川
+            lcd.disSums(com->total);
+            //lcd.disSums(com->total,OneWeight);
+        } else {
+            lcd.disSum(com->total);
+        }
+    }
+    if(load.kumi_flag == KUMI_KAIKYU && (product.productType %100 == MATRIX || product.matrix_mode == MATRIX_ON) && int(com->total) > load.target && int(com->total) < res) {
+        comp_kumi = com->kumi;
+    } else {
+        
+        //設定時間LED表示(高速モード時のみ)
+        if(load.spMode == SPEED_HIGH) {
+            if(option.kokuti==1||option.kokuti==2||option.kokuti==3){
+                if(load.kumi_flag == KUMI_DENSO){}
+                else{                se.Touch_02();}
+            }
+            if(load.kumi_flag == KUMI_DENSO){
+                for(int i = 0; i <= product.head ; i += 1) {
+                    printf("%3d:%5d:%5d:%5d\r\n",i,com->kumi,1 << i,gOyaHead);
+                    if((com->kumi & (1 << i)) > 0){
+                        printf("OK\r\n");
+                        if((gOyaHead & (1 << i)) > 0){
+                            iro[i] = PENTA_G;
+                        }else{
+                            iro[i] = C_MARU;
+                        }
+                    }else{
+                        iro[i] = C_NULL;
+                    }
+                }
+            }else{
+                led.REGIS(com->kumi);
+                //第二上限値内の組み合わせ成立だったらLED点滅させる
+                if((load.secondOnOff == 1 || btn.get_lock_flg() == true) && (int(com->total) > res)) {
+                    se.Touch_02();
+                    int btn_flg = 0;
+                    for(int i = 0; i <= load.lightTime; i += 1) {
+                        led.REGIS(com->kumi);
+                        wait(0.05);
+                        led.REGIS(0);
+                        wait(0.05);
+                        //再計算ボタンが押されたら、待機時間を待たずに終了する。
+                        //ただし、ボタンが離されたことを確認後にボタンを押されたらとする
+                        //(ボタンを押すことでここに入ってきてるかもしれないので)
+                        if(btn_flg == 1 && btn.down_press() == true) {
+                            se.Touch_02();
+                            i = load.lightTime + 1;
+                        } else if(btn.down_press() == false) {
+                            btn_flg = 1;
+                        }
+                    }
+                    no_combi_v_flg = false;
+                } else {
+                    led.REGIS(com->kumi);
+                    //wait(load.lightTime*0.1);
+                    for(int i = 0; i <= load.lightTime; i += 1) {
+                        wait(0.1);
+                        //再計算ボタンが押されたら、待機時間を待たずに終了する。
+                        if(btn.down_press() == true) {
+                            se.Touch_02();
+                            i = load.lightTime + 1;
+                        }
+                    }
+                    no_combi_v_flg = false;
+                }
+            }
+        }
+        //設定時間LED表示(ハイパーモード時のみ)
+        else if(load.spMode == SPEED_HYPER){
+            if(option.kokuti==1||option.kokuti==2||option.kokuti==3){
+                se.Touch_02();
+            }
+            if(product.productType %100 == MATRIX || product.matrix_mode == MATRIX_ON){
+                //led.REGIS3(com->kumi);
+                led.REGIS(com->kumi);
+            }else{
+                led.REGIS(com->kumi);
+            }
+            //第二上限値内の組み合わせ成立だったらLED点滅させる
+            if((load.secondOnOff == 1 ||btn.get_lock_flg() == true) && (int(com->total) > res)){
+                junsaiteki_loop = 1;
+                se.Touch_02();
+                int btn_flg = 0;
+                resultCombi.kumi  = com->kumi ;                    //最小組み合わせ結果を取得
+                resultCombi.total = com->total;
+                for(int i = 0; i <= load.lightTime; i += 1){
+                    if(product.productType %100 == MATRIX || product.matrix_mode == MATRIX_ON){
+                        //led.REGIS3(resultCombi.kumi);
+                        led.REGIS(resultCombi.kumi);
+                        wait(0.02);
+                    }else{
+                        led.REGIS(resultCombi.kumi);
+                        wait(0.02);
+                        led.REGIS(0);
+                    }
+                    setHeadVolt((i*2)%product.head  , param.KURI/3*2);
+                    setHeadVolt((i*2)%product.head+1, param.KURI/3*2);
+                    int secondCnt = 0;
+                    Compulsion_no_combi_v_flg = true;
+                    get_combi_location(orderCombi, &secondCnt);     //組み合わせ確認,組み合わせ候補を抽出
+                    Compulsion_no_combi_v_flg = false;
+                    //printf("o %8.1f:r %8.1f\r\n",orderCombi[0].total,resultCombi.total);
+                    //組合せ確認で出てきた結果が[組合せ範囲内] or [前回より軽かった]場合は、resultCombiを更新する
+                    if(int(orderCombi[0].total) >= load.target && int(orderCombi[0].total) < res/* || orderCombi[0].total < resultCombi.total*/){
+                        resultCombi = orderCombi[0];                    //最小組み合わせ結果を取得
+                    }
+                    if(int(resultCombi.total) >= load.target && int(resultCombi.total) < res){
+                        setHeadVolt((i*2)%product.head  , param.KURI/3*2);
+                        setHeadVolt((i*2)%product.head+1, param.KURI/3*2);
+                        get_combi_location(orderCombi, &secondCnt);     //組み合わせ確認,組み合わせ候補を抽出
+                        resultCombi = orderCombi[0];                    //最小組み合わせ結果を取得
+                        //printf("o %8.1f:r %8.1f\r\n",orderCombi[0].total,resultCombi.total);
+                        if(int(resultCombi.total) > load.target && int(resultCombi.total) < res){
+                            junsaiteki_loop = 2;
+                            i = load.lightTime + 1;
+                            //return;
+                        }
+                        //com->kumi  = resultCombi.kumi;                    //最小組み合わせ結果を取得
+                        //com->total = resultCombi.total;
+                        //lcd.bigNumber(resultCombi.total); //大文字で重量を表示
+                    }
+                    else{
+                        lcd.bigNumber(resultCombi.total); //大文字で重量を表示
+                    }
+                    //wait(0.05);
+                    //再計算ボタンが押されたら、待機時間を待たずに終了する。
+                    //ただし、ボタンが離されたことを確認後にボタンを押されたらとする
+                    //(ボタンを押すことでここに入ってきてるかもしれないので)
+                    if(btn_flg == 1 && btn.down_press() == true){
+                        se.Touch_02();
+                        junsaiteki_loop = 0;
+                        i = load.lightTime + 1;
+                        led.REGIS(0);
+                    }else if(btn.down_press() == false){
+                        btn_flg = 1;
+                    }
+                    lcd.bigNumber(resultCombi.total); //大文字で重量を表示
+                }
+                no_combi_v_flg = false;
+            }else{
+                led.REGIS(com->kumi);
+                //wait(load.lightTime*0.1);
+                for(int i = 0; i <= load.lightTime; i += 1){
+                    wait(0.1);
+                    //再計算ボタンが押されたら、待機時間を待たずに終了する。
+                    if(btn.down_press() == true){
+                        se.Touch_02();
+                        i = load.lightTime + 1;
+                    }
+                }
+                no_combi_v_flg = false;
+            }
+        }//設定時間LED表示(ユックリの準最適値のみ)
+        else if(load.spMode == SPEED_LOW /*&& product.limit_on == WIDE_LIMIT*/ &&
+                (load.secondOnOff == 1 ||btn.get_lock_flg() == true) && (int(com->total) > res)){
+            //if(option.kokuti==1||option.kokuti==2){
+                se.Touch_02();
+            //}
+            if(product.productType %100 == MATRIX || product.matrix_mode == MATRIX_ON){
+                //led.REGIS3(com->kumi);
+                led.REGIS(com->kumi);
+            }else{
+                led.REGIS(com->kumi);
+            }
+            //第二上限値内の組み合わせ成立だったらLED点滅させる
+            if((load.secondOnOff == 1 ||btn.get_lock_flg() == true) && (int(com->total) > res)){
+                junsaiteki_loop = 1;
+                se.Touch_02();
+                int btn_flg = 0;
+                resultCombi.kumi  = com->kumi ;                    //最小組み合わせ結果を取得
+                resultCombi.total = com->total;
+                miri_end=0;
+                //miri_sec.attach( &miri_count, 0.1);
+                miri_sec.attach( &miri_count, float(load.lightTime/10));
+                for(int i=0;i <= load.lightTime; i += 1){ //指定時間まで光らせる(成立すれば終了)
+                    /*if(product.matrix_mode == MATRIX_ON){
+                        if(i == 0){
+                            //led.REGIS3(resultCombi.kumi);
+                            led.REGIS(resultCombi.kumi);
+                            lcd.bigNumber(resultCombi.total); //大文字で重量を表示
+                        }
+                    }else{*/
+                        led.REGIS(resultCombi.kumi);
+                        wait(0.02);
+                        led.REGIS(0);
+                    //}
+                    setHeadVolt((i*2)%product.head  , param.KURI/3);  setHeadVolt((i*2)%product.head+1, param.KURI/3);
+                    if(product.matrix_mode == MATRIX_ON){
+                        setHeadVolt((i*2)%product.head+2, param.KURI/3);  setHeadVolt((i*2)%product.head+3, param.KURI/3);
+                        setHeadVolt((i*2)%product.head+4, param.KURI/3);  setHeadVolt((i*2)%product.head+5, param.KURI/3);
+                        if(product.head==8){
+                            setHeadVolt((i*2)%product.head+6, param.KURI/3);  setHeadVolt((i*2)%product.head+7, param.KURI/3);
+                        }
+                    }
+                    int secondCnt = 0;
+                    Compulsion_no_combi_v_flg = true;
+                    get_combi_location(orderCombi, &secondCnt);     //組み合わせ確認,組み合わせ候補を抽出
+                    Compulsion_no_combi_v_flg = false;
+                    //printf("o %8.1f:r %8.1f\r\n",orderCombi[0].total,resultCombi.total);
+                    //組合せ確認で出てきた結果が[組合せ範囲内] or [前回より軽かった]場合は、resultCombiを更新する
+                    if(int(orderCombi[0].total) >= load.target && int(orderCombi[0].total) < res/* || orderCombi[0].total < resultCombi.total*/){
+                        resultCombi = orderCombi[0];                    //最小組み合わせ結果を取得
+                    }
+                    if(int(orderCombi[0].total) >= load.target && int(orderCombi[0].total) < res){
+                        setHeadVolt((i*2)%product.head  , param.KURI/3);  setHeadVolt((i*2)%product.head+1, param.KURI/3);
+                        if(product.matrix_mode == MATRIX_ON){
+                            setHeadVolt((i*2)%product.head+2, param.KURI/3);  setHeadVolt((i*2)%product.head+3, param.KURI/3);
+                            setHeadVolt((i*2)%product.head+4, param.KURI/3);  setHeadVolt((i*2)%product.head+5, param.KURI/3);
+                            if(product.head==8){
+                                setHeadVolt((i*2)%product.head+6, param.KURI/3);  setHeadVolt((i*2)%product.head+7, param.KURI/3);
+                            }
+                        }
+                        /*orderCombi[0].total=0;
+                        for(int j =0;j<=product.head;j++){
+                            if(((1<<j)& orderCombi[0].kumi)>0){
+                                setHeadVolt(j, param.KURI/3);
+                                orderCombi[0].total += cel.get_now_weight();
+                            }
+                        }*/
+                        get_combi_location(orderCombi, &secondCnt);     //組み合わせ確認,組み合わせ候補を抽出
+                        resultCombi = orderCombi[0];                    //最小組み合わせ結果を取得
+                        //printf("o %8.1f:r %8.1f\r\n",orderCombi[0].total,resultCombi.total);
+                        if(int(orderCombi[0].total) > load.target && int(orderCombi[0].total) < res){
+                            junsaiteki_loop = 2;
+                            i = load.lightTime + 1;
+                            resultCombi = orderCombi[0]; 
+                            //return;
+                            miri_end=1;
+                        }
+                        //com->kumi  = resultCombi.kumi;                    //最小組み合わせ結果を取得
+                        //com->total = resultCombi.total;
+                        //lcd.bigNumber(resultCombi.total); //大文字で重量を表示
+                    }
+                    else{
+                        lcd.bigNumber(resultCombi.total); //大文字で重量を表示
+                    }
+                    //wait(0.05);
+                    //再計算ボタンが押されたら、待機時間を待たずに終了する。
+                    //ただし、ボタンが離されたことを確認後にボタンを押されたらとする
+                    //(ボタンを押すことでここに入ってきてるかもしれないので)
+                    if(btn_flg == 1 && btn.down_press() == true){
+                        se.Touch_02();
+                        junsaiteki_loop = 0;
+                        i = load.lightTime + 1;
+                        led.REGIS(0);
+                    }else if(btn.down_press() == false){
+                        btn_flg = 1;
+                    }
+                    if(product.matrix_mode == MATRIX_ON){
+                        //i = load.lightTime + 1;
+                    }else{
+                        lcd.bigNumber(resultCombi.total); //大文字で重量を表示
+                    }
+                    if(miri_end==1){
+                        miri_sec.detach();
+                        i = load.lightTime;
+                        miri_end=0;
+                    }
+                }
+            }
+            no_combi_v_flg = false;
+        }
+    }
+    
+    if(int(com->total) > res) {
+        lcd.cls();
+    }
+}

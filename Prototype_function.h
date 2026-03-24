@@ -1,0 +1,1 @@
+bool touroku_data_check();
