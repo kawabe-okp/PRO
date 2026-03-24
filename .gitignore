@@ -1,2 +1,8 @@
 .hg/
 .hgignore
+mbed-os/
+BUILD/
+__pycache__/
+*.pyc
+mbed_settings.py
+.claude/

@@ -1,0 +1,17 @@
+mbed-os/features/filesystem/*
+mbed-os/features/netsocket/*
+mbed-os/features/nanostack/*
+mbed-os/features/lwipstack/*
+mbed-os/features/mbedtls/*
+mbed-os/features/cellular/*
+mbed-os/features/lorawan/*
+mbed-os/features/storage/*
+mbed-os/features/unsupported/*
+mbed-os/features/cryptocell/*
+mbed-os/features/device_key/*
+mbed-os/features/FEATURE_BLE/*
+mbed-os/components/*
+mbed-os/drivers/source/usb/USBMSD.cpp
+mbed-os/TEST*
+mbed-os/TESTS/*
+mbed-os/UNITTESTS/*

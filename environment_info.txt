@@ -1,0 +1,68 @@
+===== ç’°å¢ƒæƒ…å ± =====
+æ—¥æ™‚: Tue Mar 24 11:43:04     2026
+
+--- Python ---
+Python 3.9.13
+
+--- Mbed CLI ---
+1.10.5
+
+--- GCC ARM ---
+arm-none-eabi-gcc.exe (Arm GNU Toolchain 15.2.Rel1 (Build arm-15.86)) 15.2.1 20251203
+Copyright (C) 2025 Free Software Foundation, Inc.
+
+--- Git ---
+git version 2.53.0.windows.1
+
+--- Mercurial ---
+Mercurial - •ªU\¬ŠÇ—ƒc[ƒ‹(ƒo[ƒWƒ‡ƒ“ 6.3.1+hg4.c44f350759c3)
+(Ú×‚Í https://mercurial-scm.org ‚ğQÆ)
+
+===== Mbed CLI è¨­å®š =====
+[mbed] Global config:
+GCC_ARM_PATH=C:\Program Files\Arm\GNU Toolchain mingw-w64-x86_64-arm-none-eabi\bin
+
+[mbed] Local config (C:\Users\kawab\Documents\TB_PR05_04_45_antei_gram_kotei_260324):
+TARGET=LPC1768
+TOOLCHAIN=GCC_ARM
+
+===== pip ãƒ‘ãƒƒã‚±ãƒ¼ã‚¸ =====
+appdirs==1.4.4
+beautifulsoup4==4.6.3
+cbor==1.0.0
+certifi==2026.1.4
+cffi==2.0.0
+charset-normalizer==3.4.4
+click==8.1.8
+cmsis-pack-manager==0.6.0
+colorama==0.3.9
+cryptography==46.0.5
+fasteners==0.20
+future==1.0.0
+fuzzywuzzy==0.18.0
+idna==2.7
+intelhex==2.3.0
+Jinja2==3.1.6
+jsonschema==2.6.0
+junit-xml==1.8
+lockfile==0.12.2
+MarkupSafe==3.0.3
+mbed-cli==1.10.5
+mbed-os-tools==1.8.15
+packaging==26.0
+prettytable==2.5.0
+psutil==5.6.7
+pycparser==2.23
+pycryptodome==3.23.0
+pyelftools==0.28
+pyserial==3.4
+pyusb==1.3.1
+pywin32==311
+PyYAML==6.0.3
+requests==2.32.5
+six==1.12.0
+soupsieve==2.8.3
+typing_extensions==4.15.0
+urllib3==2.6.3
+wcwidth==0.6.0
+WMI==1.4.9
