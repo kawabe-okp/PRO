@@ -3,7 +3,9 @@
     "target_overrides": {
         "*": {
             "target.macros_add": ["__irq="],
-            "target.default_lib": "small"
+            "target.default_lib": "small",
+            "target.printf_lib": "minimal-printf",
+            "platform.minimal-printf-enable-floating-point": true
         }
     }
 }
