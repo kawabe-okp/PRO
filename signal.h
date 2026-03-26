@@ -17,6 +17,7 @@ void ddd();void pc_rx();
 void send_paramaters();
 void send_paramaters2();
 void send_paramaters3();
+void send_paramaters4();
 void servo_test();
 void servo_set();
 void set_servo_span();
@@ -34,6 +35,7 @@ int san_coount_rap_set=0;//
 int go_flager=0;       //ボタン式、自動排出、サン付、(時限式は未定)
 int waiter_t=10;      //皿が閉じるまでの時間
 int landing_w=20;       //閉じてからの待ち時間
+int stop_place=1;       //サン付きボタンの排出終ってから止まるまでの位置
 int servo_head=12;      //(未使用)ヘッド数の指定(今後あるかも)
 int moving0=0;           //移動中(まだ排出中)ヘッド
 int moving1=0;           //移動中(まだ排出中)ヘッド
@@ -73,7 +75,7 @@ void send_combi(int now_stage,int combi_kumi){
     signal_in1.printf(";;;%d%d%d%d%d%d%d%d%d%d%d%d\r\n",1,2,3,4,5,6,7,8,9,0,1,2);
     signal_in1.printf(":::%d%d%d%d%d%d%d%d%d%d%d%d\r\n",
     bit[0],bit[1],bit[2],bit[3],bit[4],bit[5],bit[6],bit[7],bit[8],bit[9],bit[10],bit[11]);
-    printf("\r\n");
+    //printf("\r\n");
 }
 void send_data(int head,float data1,float data2,int end_flager){
     signal_in1.printf("\t%02dH\t:\t%6.1f\t:\t%7.5f\r\n",head,data1,data2);
@@ -299,7 +301,7 @@ void processing(int a1,int a2,int a3,int a4,int a5,int a6,int a7,int a8,int a9){
             //printf("CHECK_RES\r\n");
             //befoure_check  = now_____check;
             
-            printf("\r\nCHECK_RES %5d\r\n",input_data[1]);
+            //printf("\r\nCHECK_RES %5d\r\n",input_data[1]);
             movingb1=moving1;
             moving1=input_data[1];
             moving1 = moving1 & ALL_HEAD;
@@ -349,7 +351,7 @@ void processing(int a1,int a2,int a3,int a4,int a5,int a6,int a7,int a8,int a9){
             else{       course = true;}
             course_rap=a6*Base_no*Base_no+a7*Base_no+a8;       //(未使用)1ヘッド毎にタイミングをずらして動かす際の待ち時間
             signal_flg=false;*/
-            //printf("\r\nPARA_SET shead:%5d  course:%5d course_rap:%5d\r\n",servo_head,course,course_rap);
+            //printf("\r\n1 shead:%5d  course:%5d course_rap:%5d\r\n",servo_head,course,course_rap);
         }else if(input_data[0]==EJECT_RESET){
             movingb1 = 0;
             moving1  = 0;
@@ -537,6 +539,9 @@ void send_paramaters2(){
 }
 void send_paramaters3(){
     send_para(PARA_SET3,  landing_w  ,      0, waiter_t, 0);
+}
+void send_paramaters4(){
+    send_para(PARA_SET4,  stop_place  ,      0, 0, 0);
 }
 void wait_res(){
     while(signal_flg==false){

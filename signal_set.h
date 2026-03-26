@@ -13,6 +13,8 @@ typedef enum signal_name{
     ,PARA_SET       //=  9   //各パラメータ送信cservo_headヘッド数ourse順番起動の向きcourse_rap起動時間のピッチ
     ,PARA_SET2      //= 10
     ,PARA_SET3
+    ,PARA_SET4      //= 12
+    ,PARA_SET5      //= 12
     ,MI_VALUE       //= 11    //サーボが下がった時の値(1ヘッド毎)
     ,UP_VALUE       //= 12   //サーボが上がった時の値(1ヘッド毎)
     ,OP_VALUE

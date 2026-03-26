@@ -48,7 +48,7 @@ multiWeight_t mweight;
 
 char VERSION_MODEL[3] = {'P' ,'R'};  //機種
 const float VERSION = 5.04;  //バージョン
-const char VERSION_C[7] = {'.' ,'4' ,'5' ,' ' ,' ' ,' ' ,0x00};     //バージョン
+const char VERSION_C[7] = {'.' ,'4' ,'6' ,' ' ,' ' ,' ' ,0x00};     //バージョン
 combiData_t Confilcombi[5] = {{0,0.0,0}
                              ,{0,0.0,0}
                              ,{0,0.0,0}
@@ -442,6 +442,12 @@ int main()
                     printf("KEIRYO_START\r\n");
                     if(0){
                     }else{
+                        
+                        if(option.selautozero == 0){
+                            auto_zero_off = true;
+                        }else{
+                            auto_zero_off = false;
+                        }
                         //対面だった場合、特殊な処理
                         if(load.kumi_flag == KUMI_TAIMEN) {
                             drive_face_to_face();
@@ -512,6 +518,11 @@ int main()
                             driveStart();
                             
                             
+                        }
+                        if(option.selautozero == 0){
+                            auto_zero_off = true;
+                        }else{
+                            auto_zero_off = false;
                         }
                     }
                     keiryo_start_flg = false;
@@ -13687,7 +13698,7 @@ bool select_option_use(int m){
                 case(OP_SERVO4):                             return true;
                 case(OP_ZERO_CHECK):                         return true;
                 case(OP_WAITING_LIMMIT):                     return true;
-                case(OP_SELAUTOZERO):                        return true;
+                case(OP_SELAUTOZERO):                        return false;
                 case(OP_KEKKA_HYOUJI):                       return true;
                 case(OP_ALART_AUTOZERO):                     return true;
                 case(OP_FIX_VALUE):                          return true;

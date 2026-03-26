@@ -37,7 +37,7 @@ void driving_option(){
         case OP_WAITING_LIMMIT:
         case OP_SELAUTOZERO:
         case OP_KEKKA_HYOUJI:
-        case OP_ALART_AUTOZERO:
+        //case OP_ALART_AUTOZERO:
         case OP_FIX_VALUE:
             //printf("AAAA\r\n");
             ch_back = set_option_setting(mode_op);
@@ -200,9 +200,10 @@ bool select_driveoption_use(int m){
             case(OP_SERVO2)     :return true;
             case(OP_SERVO3)     :return true;
             case(OP_SERVO4)     :return true;
-            case(OP_ZERO_CHECK)     :return true;
+            case(OP_ZERO_CHECK)     :return false;
             case(OP_WAITING_LIMMIT) :return true;
             case(OP_SELAUTOZERO)    :return true;
+            case(OP_FIX_VALUE)      :return true;
             
             case(OP_END)            :return false;
             
@@ -248,10 +249,10 @@ bool select_driveoption_use(int m){
             case(OP_O_lit_count_lim):return false;
             //case(OP_SEIRITU_SUUJI)  :return false;
             //case(OP_KEIRYOU_KEKKA)  :return false;
-            case(OP_SELAUTOZERO)    :return true;
+            //case(OP_SELAUTOZERO)    :return true;
             case(OP_KEKKA_HYOUJI)   :return true;
             case(OP_ALART_AUTOZERO) :return false;
-            case(OP_FIX_VALUE):return false;
+            case(OP_FIX_VALUE)      :return true;
             case(OP_END)            :return false;
             
             case(OP_KUMI_COUNT)     :return true ;

@@ -1528,7 +1528,8 @@ void LoadCell::checkZeroRum(){
     }
     
     //現在の電圧と、前回の電圧の差(風袋込)
-    float diff= askWeight(_pVal[_head].vol_old1) - _pVal[_head].weight;
+    //float diff= askWeight(_pVal[_head].vol_old1) - _pVal[_head].weight;
+    float diff= _pVal[_head].weight_old1 - _pVal[_head].weight;
     autoTare(diff);
     _pVal[_head].hweight = ask_H_Weight(_pVal[_head].hVolt); 
     _pVal[_head].weight = askWeight(_pVal[_head].volt);//重量取得

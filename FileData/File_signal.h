@@ -75,13 +75,14 @@ void FileData::save_dservo(){
         exit(EXIT_FAILURE);
     }
         
-    fprintf(sfp,"%d  %d  %d  %d  %d  %5d\r\n"
+    fprintf(sfp,"%d  %d  %d  %d  %d  %5d  %d\r\n"
         ,course+(go_flager*10)
         ,course_rap
         ,san_coount_rap_set
         ,waiter_t
         ,landing_w
         ,kyousei_zero_kaisu
+        ,stop_place
     );
     fclose(sfp);
     sfp = NULL;
@@ -100,13 +101,14 @@ void FileData::read_dservo(){
         file_lost_sig += 16384;
         save_dservo();
     }else{
-        fscanf(fp, "%d%d%d%d%d%d"
+        fscanf(fp, "%d%d%d%d%d%d%d"
             ,&composition 
             ,&course_rap
             ,&san_coount_rap_set
             ,&waiter_t
             ,&landing_w
             ,&kyousei_zero_kaisu
+            ,&stop_place
         );
         courseints = composition % 10;
         go_flager  = composition / 10;
@@ -133,6 +135,11 @@ void FileData::read_dservo(){
             kyousei_zero_kaisu = 0;
         }else if(kyousei_zero_kaisu > 10000){
             kyousei_zero_kaisu = 10000;
+        }
+        if(stop_place < 0){
+            stop_place = 0;
+        }else if(stop_place > 20){
+            stop_place = 20;
         }
         
         
