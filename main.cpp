@@ -11017,6 +11017,7 @@ void set_span()
             return;
         }
     }
+    lcd.cls();                                  //auto_span_ck後のLCD状態をリセット
     if(product.head>1){
         span_item_f = span_item_ck();
     }else{
@@ -11998,6 +11999,7 @@ void set_span_preset(int preset_head)
             return;
         }
     }
+    lcd.cls();                                  //auto_span_ck後のLCD状態をリセット
     /*
     if(product.head>1){
         span_item_f = 0;
