@@ -172,6 +172,7 @@ int main()
     //printf("A:%d",oneBit[product.head+1]*2-1);
     //***********************************************
     
+    print_file_data();
     servo_set();
     servo_first_settting = true;
     //裏操作の場合にはゼロ点エラーを確認しない

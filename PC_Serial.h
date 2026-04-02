@@ -315,3 +315,68 @@ void pc_rx () {
     buf2 =0;
     */
 }
+
+void print_file_data(){
+    pc.printf("\r\n===== FILE DATA =====\r\n");
+
+    //製品情報
+    pc.printf("[product]\r\n");
+    pc.printf("  type:%d head:%d limit:%d array:%d rating:%d matrix:%d usb:%d\r\n",
+        product.productType, product.head, product.limit_on,
+        product.Array, product.Rating, product.matrix_mode, product.use_usb);
+
+    //パラメータ
+    pc.printf("[param]\r\n");
+    pc.printf("  hundo:%d\r\n", param.hundo);
+    pc.printf("  KURI:%d KURI_Y:%d KURI_J:%d\r\n",
+        param.KURI, param.KURI_Y, param.KURI_J);
+    pc.printf("  CUT:%d CUT_Y:%d\r\n", param.CUT, param.CUT_Y);
+    pc.printf("  sabun:%d BARA_KAKUNIN:%d\r\n", param.sabun, param.BARA_KAKUNIN);
+    pc.printf("  liteLedOff:%d\r\n", param.liteLedOff);
+    pc.printf("  tairyu:%d vivration:%d\r\n", param.tairyu, param.vivration);
+    pc.printf("  zeroErr:%d zeroRange:%d\r\n", param.zeroErr, param.zeroRange);
+    pc.printf("  zerocount:%d\r\n", param.zerocount);
+    pc.printf("  ZEROTOLERANCE:%6.4f\r\n", param.ZEROTOLERANCE);
+    pc.printf("  ZEROAREA:%4.1f ZEROAREA2:%4.1f\r\n", param.ZEROAREA, param.ZEROAREA2);
+    pc.printf("  BARATSUKI:%4.1f\r\n", param.BARATSUKI);
+    pc.printf("  buffer:%4.1f\r\n", param.buffer);
+    pc.printf("  MINI_target:%4.1f\r\n", param.MINI_target);
+    pc.printf("  BARATSUKI_R:%4.1f BARATSUKI_GRAM:%4.1f\r\n",
+        param.BARATSUKI_R, param.BARATSUKI_GRAM);
+    pc.printf("  buffer2:%4.1f bufferT:%4.1f\r\n", param.buffer2, param.bufferT);
+    pc.printf("  buffer_kaisu:%4.1f\r\n", param.buffer_kaisu);
+    pc.printf("  BARATSUKI_SA:%4.1f\r\n", param.BARATSUKI_SA);
+
+    //目標設定値
+    pc.printf("[loadcell]\r\n");
+    pc.printf("  target:%d jougen:%d katamen:%d\r\n",
+        load.target, load.jougen, load.katamen);
+    pc.printf("  kumi_flag:%d kumi_min:%d kumi_max:%d\r\n",
+        load.kumi_flag, load.kumi_min, load.kumi_max);
+    pc.printf("  lightTime:%d spMode:%d tanjuu:%d\r\n",
+        load.lightTime, load.spMode, load.tanjuu);
+
+    //基本設定
+    pc.printf("[basic]\r\n");
+    pc.printf("  startKinji:%d temperature:%d\r\n",
+        bscData.startKinji, bscData.temperature);
+
+    //オプション
+    pc.printf("[option]\r\n");
+    pc.printf("  reck_zen:%d reck_ato:%d usb_EN:%d c_rotate:%d\r\n",
+        option.reck_zen, option.reck_ato, option.usb_EN, option.c_rotate);
+    pc.printf("  rank_over:%d kokuti:%d rank_speed:%d btn_sett:%d\r\n",
+        option.rank_over, option.kokuti, option.rank_speed, option.btn_sett);
+    pc.printf("  selautozero:%d kekka_hyouji:%d fix_value:%d\r\n",
+        option.selautozero, option.kekka_hyouji, option.fix_value);
+    pc.printf("  waiting_limit:%d nagamono_hosei:%d\r\n",
+        option.waiting_limit, option.nagamono_hosei);
+
+    //サーボスパン
+    pc.printf("[servo_span] MIN / UP\r\n");
+    for(int i = 0; i < product.head; i++){
+        pc.printf("  [%2d] %5d / %5d\r\n", i+1, servo_span[i][0], servo_span[i][1]);
+    }
+
+    pc.printf("=====================\r\n\r\n");
+}

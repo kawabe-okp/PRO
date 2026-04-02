@@ -125,6 +125,7 @@ class GCC(mbedToolchain):
         self.cppc += self.flags['cxx'] + self.flags['common']
 
         self.flags['ld'] += self.cpu
+        self.flags['ld'] += ["-Wl,-u,_scanf_float"]
         self.ld = [join(tool_path, "arm-none-eabi-gcc")] + self.flags['ld']
         self.sys_libs = ["stdc++", "supc++", "m", "c", "gcc", "nosys"]
         self.preproc = [join(tool_path, "arm-none-eabi-cpp"), "-E", "-P"]
