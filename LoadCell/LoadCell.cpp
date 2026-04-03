@@ -639,6 +639,7 @@ void LoadCell::setAinSpeed(int repeat){
     if(image_weight[_head] > 0){
         //set_imageweight(_head+1,image_weight[_head]);
         _pVal[_head].vol_old = _pVal[_head].volt;       //前回の値を取得
+
         _pVal[_head].volt    = 0.35;       //ロードセル値を０gの値として取得
         _pVal[_head].weight_old2 = _pVal[_head].weight_old1;
         _pVal[_head].weight_old1 = _pVal[_head].weight;
@@ -653,6 +654,7 @@ void LoadCell::setAinSpeed(int repeat){
 
         _pVal[_head].vol_old = _pVal[_head].volt;       //前回の値を取得
         _pVal[_head].volt = now_voit(repeat);       //ロードセル値を取得
+        _pVal[_head].spanvolt = _pVal[_head].volt;
         _pVal[_head].weight_old2 = _pVal[_head].weight_old1;
         _pVal[_head].weight_old1 = _pVal[_head].weight;
         _pVal[_head].weight  = askWeight(_pVal[_head].volt);//重量取得
